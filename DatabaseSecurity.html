@@ -1,0 +1,435 @@
+﻿
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="keywords" content="remark,remarkjs,markdown,slideshow,presentation" />
+    <meta name="description" content="A simple, in-browser, markdown-driven slideshow tool." />
+    <title>Remark</title>
+    <style>
+      @import url(https://fonts.googleapis.com/css?family=Droid+Serif);
+      @import url(https://fonts.googleapis.com/css?family=Yanone+Kaffeesatz);
+      @import url(https://fonts.googleapis.com/css?family=Ubuntu+Mono:400,700,400italic);
+
+      body {
+        font-family: 'Droid Serif';
+      }
+      h1, h2, h3 {
+        font-family: 'Yanone Kaffeesatz';
+        font-weight: 400;
+        margin-bottom: 0;
+      }
+      .remark-slide-content h1 { font-size: 3em; }
+      .remark-slide-content h2 { font-size: 2em; }
+      .remark-slide-content h3 { font-size: 1.6em; }
+      .footnote {
+        position: absolute;
+        bottom: 3em;
+      }
+      li p { line-height: 1.25em; }
+      .red { color: #fa0000; }
+      .large { font-size: 2em; }
+      a, a > code {
+        color: rgb(249, 38, 114);
+        text-decoration: none;
+      }
+      code {
+        background: #e7e8e2;
+        border-radius: 5px;
+      }
+      .remark-code, .remark-inline-code { font-family: 'Ubuntu Mono'; }
+      .remark-code-line-highlighted     { background-color: #373832; }
+      .pull-left {
+        float: left;
+        width: 47%;
+      }
+      .pull-right {
+        float: right;
+        width: 47%;
+      }
+      .pull-right ~ p {
+        clear: both;
+      }
+      #slideshow .slide .content code {
+        font-size: 0.8em;
+      }
+      #slideshow .slide .content pre code {
+        font-size: 0.9em;
+        padding: 15px;
+      }
+      .inverse {
+        background: #272822;
+        color: #777872;
+        text-shadow: 0 0 20px #333;
+      }
+      .inverse h1, .inverse h2 {
+        color: #f3f3f3;
+        line-height: 0.8em;
+      }
+
+      /* Slide-specific styling */
+      #slide-inverse .footnote {
+        bottom: 12px;
+        left: 20px;
+      }
+      #slide-how .slides {
+        font-size: 0.9em;
+        position: absolute;
+        top:  151px;
+        right: 140px;
+      }
+      #slide-how .slides h3 {
+        margin-top: 0.2em;
+      }
+      #slide-how .slides .first, #slide-how .slides .second {
+        padding: 1px 20px;
+        height: 90px;
+        width: 120px;
+        -moz-box-shadow: 0 0 10px #777;
+        -webkit-box-shadow: 0 0 10px #777;
+        box-shadow: 0 0 10px #777;
+      }
+      #slide-how .slides .first {
+        background: #fff;
+        position: absolute;
+        top: 20%;
+        left: 20%;
+        z-index: 1;
+      }
+      #slide-how .slides .second {
+        position: relative;
+        background: #fff;
+        z-index: 0;
+      }
+
+      /* Two-column layout */
+      .left-column {
+        color: #777;
+        width: 20%;
+        height: 92%;
+        float: left;
+      }
+        .left-column h2:last-of-type, .left-column h3:last-child {
+          color: #000;
+        }
+      .right-column {
+        width: 75%;
+        float: right;
+        padding-top: 1em;
+      }
+    </style>
+  </head>
+  <body>
+    <textarea id="source">
+
+class: center, middle
+
+# **Securing Data Warehouse Environment **
+
+Richard Griffiths
+
+MCTS 2005, 2008, MCSA 2012
+
+Database Developer at Confused.Com
+
+???
+
+---
+
+# Overview
+
+1. Active Directory
+2. Proxy Accounts 
+3. Linked Servers
+4. Deduplicate Data 
+5. Standard Databases
+6. Standard Schemas & Roles
+7. PII Extended Properties
+8. Procedures to Maintain & Audit Security
+9. Definining & Protecting Endpoints
+10. Endpoint Schemas
+11. If did it again...
+12. Summary
+13. What would you do?
+
+???
+
+ I just want to tell you the process I went through to eventually 
+secure the NHS Wales Data Warehouse...
+* Trying to make this as chronological as possible but somethings happened in parallel
+* Tweaks happened as learned, but the foundations were fairly static.
+
+---
+
+# Active Directory 
+
+### Functions
+- Kept it simple...
+
+- Administration (Full Control) Group
+
+- Developer Group
+
+- Reader Group
+
+- Each group/area defined would have these three functional capabilities
+
+???
+
+* First defined three standard functional groups to use in each area
+
+---
+
+# Active Directory
+
+### Groups / Services - Phase 1
+
+* Tackled internal groups and services first...
+
+* Acquisition, Stage , Data Warehouse (ETL), Standard Analysts, Super Analysts, Publishers
+
+* Each of these had the three functional active directory groups
+
+* This was replicated in development, test and production environments
+
+* 54 groups... Now not all were "used" but it was generic and same processes could always be applied
+
+???
+
+* This is what I started with. 
+* Stage and data warehouse probably didnt need to be separated, more on this later.
+
+---
+
+# Active Directory
+
+### Examples 
+#### Domain\Environment_Area_Function
+
+* **Domain\PR_War_Adm** - Full control of warehouse.
+
+* **Domain\PR_War** - Dev capabilities of warehouse (e.g. DML, DDL)
+
+* **Domain\PR_War_Rdr** - Read only*
+
+* *Read only what we allow to them to read.. More on this later.
+
+* These are active directory **GROUPS**.
+
+* Users would be members of appropriate groups and...
+
+
+???
+
+* Used standard naming convention.
+* 2 chars for environment, three characters for area, then function.
+* Didn't add Dev extension to the dev group one as got confusing.
+
+---
+
+# Proxy Accounts 
+
+* Needed ETL proxies and reader proxies for reports
+
+* The ETL proxies would usually span two areas
+
+* **Domain\PR_StaWar_P** was in the **Domain\PR_War** and **Domain\PR_Sta** active directory groups. 
+
+* But there were those that executed on a single area
+
+* **Domain\PR_War_P** would be in **Domain\PR_War**
+
+* Reader proxies would belong to a single reader group/area
+
+* **Domain\PR_Pub_Rdr_P** would be in **Domain\PR_Pub_Rdr**
+
+* These are active directory USERS.
+
+* These proxies were eventually used in SQL agent jobs and reporting data sources.
+
+???
+
+---
+
+# Linked Servers
+
+* Security Hazard.
+
+* I'm not going to lie, they just had to go.
+
+???
+
+* Lots of security issues with linked servers and people circumventing their own permissions with the linked server account.
+* Went through a migration from DTS to SSIS and did incorporated the work into that.
+* Watch like a hawk, audit, policy based management maybe.
+
+---
+
+# Deduplicate Data
+
+* Created dimensions for all descriptive items, including PII.
+
+* All activity (fact) tables hung off the surrogate keys and the actual values stored in one place.
+
+* Much easier to secure as only stored in one place.
+
+* Biggest difficulty then - some endpoint users taking the data and duplicating it themselves.
+
+???
+
+---
+
+# Standard Databases
+
+* Created databases with regards to their function
+
+* Idea was to reduce flux later, define functions that multiple services could  be provided with, so security remained static
+
+* **dw_tools** - Useful generic routines and objects.
+
+* **dw_admin** - DBA database
+
+* **dw_meta** - Metadata from Database Engine, Analysis Services, SSIS and SSRS
+
+* **dw_process** - Audits, ETL logic
+
+* **dw_ref** - Reference Data and Business Logic
+
+* **dw_stage** - Staging Area
+
+* **dw** - Data Model
+
+* **dw_config** - (came later) Configuration details and procedures for deployment of procedures/tables.
+
+???
+
+* 
+
+ ---
+
+# Standard Schemas & Roles
+
+* As with databases, reduced schema flux so security wouldnt change much either from process to process, service to service
+
+* For each of these created a schema and a role that had exec, read and view definition on the schema.
+
+* import - The internal architecture, hidden from RDR active directory groups.  
+
+* export - Sending data out of a database.
+
+* acc - Standard access to items via SSMS.
+
+* app - Access via an application.
+
+* meta - Metadata objects.
+
+* admin - Used to carry out database maintenace tasks.
+
+* pii - Alas... 
+
+???
+        
+---
+
+# PII Extended Properties
+
+* Used extended properties to flag PII columns
+
+* First worked with Information Governance to get names of columns
+
+* Used information schema to find them and flag them
+
+* Then used stored procedure to DENY access to these columns to appropriate roles or users. 
+
+* Later this was built into design as used excel sheets to implement data warehouse tables with PII flags in them (Quick Demo)
+
+???
+
+---
+
+# Procedures to Maintain and Audit Security 
+
+* As part of standard database build had procedures to maintain security
+
+* Those that ensured DENY PII was enforced
+
+* Those that ensured roles to schema access was granted
+
+* Used dw_admin database to capture security audits
+
+???
+
+---
+
+# Defining & Protecting Endpoints
+
+* Up until now things have been simple and maintained very much within a data warehouse environment
+
+* The trick is to only have multiple endpoints coming in stage area and going out from one place - on top of your data model
+
+* All of the internal databases shouldn't be exposed and not their "import" schema layer
+
+* Keep the "kitchen" away from everyone except the dw/db team
+
+* Staging area, so data coming in, requires endpoint specific schemas
+
+* Abstract everything going out via views and routines on your main "import" architecture
+
+* Layer on top of data model requires endpoint specific schemas
+	
+???
+
+---
+
+# Endpoint Schemas
+
+(Groups/Services - Phase 2)
+
+* Going out of the data warehouse created grpNN schemas and roles
+
+* These also required domain\PR_grpNN_Rdr active directory groups 
+
+* Also required domain\PR_grpNN_Rdr_P proxies in some cases
+
+* Went generic as organisations kept changing their name
+
+* Kept the grpNN and their description in reference data
+
+* In staging area did something similar but instead used three characters to define an endpoint and kept these in reference data
+
+* e.g. CAN for cancer operational source
+
+* Also lived on their own filegroup in staging area too
+
+???
+
+---
+
+# If did it again..
+
+* Would change endpoints to be services rather than groups where groups would live in services
+
+* Multiple groups used same objects (services), so had to repeat with the grpNN schemas
+
+* Would have gone srvNN with grpNN living in these. More complex but correct.
+
+* After learning here at confused, maybe multiple template stage databases instead of filegroups in one database
+
+???
+
+---
+
+# Summary
+
+???
+
+---
+ 
+    </textarea>
+    <script src="https://gnab.github.io/remark/downloads/remark-latest.min.js">
+    </script>
+    <script>
+      var slideshow = remark.create();
+    </script>
+  </body>
+</html>
