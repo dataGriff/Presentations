@@ -139,40 +139,41 @@ Database Developer at Confused.Com
 # Overview
 
 1. Active Directory
-2. Proxy Accounts 
+2. Proxy Accounts
 3. Linked Servers
-4. Deduplicate Data 
+4. Deduplicate Data
 5. Standard Databases
 6. Standard Schemas & Roles
 7. PII Extended Properties
-8. Procedures to Maintain & Audit Security
-9. Definining & Protecting Endpoints
-10. Endpoint Schemas
-11. If did it again...
-12. Summary
-13. What would you do?
+8. Securing Freetext Fields
+9.  Procedures to Maintain & Audit Security
+10. Definining & Protecting Endpoints
+11. Endpoint Schemas
+12. If did it again...
+13. Summary
+14. What would you do?
 
 ???
 
- I just want to tell you the process I went through to eventually 
+ I just want to tell you the process I went through to eventually
 secure the NHS Wales Data Warehouse...
 * Trying to make this as chronological as possible but somethings happened in parallel
 * Tweaks happened as learned, but the foundations were fairly static.
 
 ---
 
-# Active Directory 
+# Active Directory
 
-### Functions
+### Functional Groups
 - Kept it simple...
 
-- Administration (Full Control) Group
+- Administrative (Full Control) Group
 
 - Developer Group
 
 - Reader Group
 
-- Each group/area defined would have these three functional capabilities
+- Each group/area/service defined would have these three functional capabilities
 
 ???
 
@@ -196,14 +197,14 @@ secure the NHS Wales Data Warehouse...
 
 ???
 
-* This is what I started with. 
+* This is what I started with.
 * Stage and data warehouse probably didnt need to be separated, more on this later.
 
 ---
 
 # Active Directory
 
-### Examples 
+### Examples
 #### Domain\Environment_Area_Function
 
 * **Domain\PR_War_Adm** - Full control of warehouse.
@@ -227,13 +228,13 @@ secure the NHS Wales Data Warehouse...
 
 ---
 
-# Proxy Accounts 
+# Proxy Accounts
 
-* Needed ETL proxies and reader proxies for reports
+* Needed ETL proxies for jobs and reader proxies for reports
 
 * The ETL proxies would usually span two areas
 
-* **Domain\PR_StaWar_P** was in the **Domain\PR_War** and **Domain\PR_Sta** active directory groups. 
+* **Domain\PR_StaWar_P** was in the **Domain\PR_War** and **Domain\PR_Sta** active directory groups.
 
 * But there were those that executed on a single area
 
@@ -256,6 +257,8 @@ secure the NHS Wales Data Warehouse...
 * Security Hazard.
 
 * I'm not going to lie, they just had to go.
+
+* So we got rid of them all going from DTS to SSIS
 
 ???
 
@@ -303,9 +306,7 @@ secure the NHS Wales Data Warehouse...
 
 ???
 
-* 
-
- ---
+---
 
 # Standard Schemas & Roles
 
@@ -313,22 +314,43 @@ secure the NHS Wales Data Warehouse...
 
 * For each of these created a schema and a role that had exec, read and view definition on the schema.
 
-* import - The internal architecture, hidden from RDR active directory groups.  
+* **import** - The internal architecture, hidden from RDR active directory groups.
 
-* export - Sending data out of a database.
+* **export** - Sending data out of a database.
 
-* acc - Standard access to items via SSMS.
+* **acc** - Standard access to items via SSMS.
 
-* app - Access via an application.
+* **app** - Access via an application.
 
-* meta - Metadata objects.
+* **meta** - Metadata objects.
 
-* admin - Used to carry out database maintenace tasks.
+* **admin** - Used to carry out database maintenace tasks.
 
-* pii - Alas... 
+* **pii** - Alas...
 
 ???
-        
+
+---
+
+# Standard Schemas & Roles
+
+* **olap** - Eventually used to feed cubes via views
+
+* **stage** - When deciding whether to stage in same database as warehouse
+
+* **ref** - This was still under debate, there was a reference databse with acc objects for querying but pondered putting all in warehouse with ref schema
+
+
+## Beware of database chaining
+
+* A lot of the schemas had various owners (tut,tut)
+
+* Just make sure schemas are owned by dbo and your fine
+
+* Otherwise database ownership chaining can give you a headache
+
+???
+
 ---
 
 # PII Extended Properties
@@ -339,15 +361,30 @@ secure the NHS Wales Data Warehouse...
 
 * Used information schema to find them and flag them
 
-* Then used stored procedure to DENY access to these columns to appropriate roles or users. 
+* Then used stored procedure to DENY access to these columns to appropriate roles or users.
 
-* Later this was built into design as used excel sheets to implement data warehouse tables with PII flags in them (Quick Demo)
+* Later this was built in at design as used excel sheets to implement data warehouse tables with PII flags in them (Quick Demo)
 
 ???
 
 ---
 
-# Procedures to Maintain and Audit Security 
+# Securing Freetext Fields
+
+* Found a number of freetext fields with PII in them
+
+* These were isolated into distinct dimension tables
+
+* Term extraction used to create useful non-PII attributes
+
+* The freetext field then secured as per PII extended property
+
+
+???
+
+---
+
+# Procedures to Maintain and Audit Security
 
 * As part of standard database build had procedures to maintain security
 
@@ -376,7 +413,7 @@ secure the NHS Wales Data Warehouse...
 * Abstract everything going out via views and routines on your main "import" architecture
 
 * Layer on top of data model requires endpoint specific schemas
-	
+
 ???
 
 ---
@@ -387,7 +424,7 @@ secure the NHS Wales Data Warehouse...
 
 * Going out of the data warehouse created grpNN schemas and roles
 
-* These also required domain\PR_grpNN_Rdr active directory groups 
+* These also required domain\PR_grpNN_Rdr active directory groups
 
 * Also required domain\PR_grpNN_Rdr_P proxies in some cases
 
@@ -424,7 +461,7 @@ secure the NHS Wales Data Warehouse...
 ???
 
 ---
- 
+
     </textarea>
     <script src="https://gnab.github.io/remark/downloads/remark-latest.min.js">
     </script>
